@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Performance — Offpremium NMarcas</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f8f6; color: #1a1a18; min-height: 100vh; padding: 1.5rem; }
+    h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+    h2 { font-size: 14px; font-weight: 500; color: #5f5e5a; margin: 1.25rem 0 10px; }
+    p { line-height: 1.5; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 14px; }
+    .pills { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .pill { background: #ededeb; border: 0.5px solid #d3d1c7; border-radius: 8px; padding: 4px 10px; font-size: 12px; color: #5f5e5a; }
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+    .legend-item { font-size: 12px; color: #5f5e5a; display: flex; align-items: center; gap: 5px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .nav-top { display: flex; border-bottom: 0.5px solid #d3d1c7; margin-bottom: 16px; gap: 0; }
+    .ntab { background: transparent; border: none; border-bottom: 2px solid transparent; padding: 7px 18px; font-size: 14px; font-family: inherit; color: #888780; cursor: pointer; margin-bottom: -1px; transition: color .15s; }
+    .ntab.active { color: #1a1a18; border-bottom-color: #1a1a18; font-weight: 500; }
+    .tabs-device { display: flex; border-bottom: 0.5px solid #d3d1c7; margin-bottom: 12px; }
+    .dtab { background: transparent; border: none; border-bottom: 2px solid transparent; padding: 7px 18px; font-size: 14px; font-family: inherit; color: #888780; cursor: pointer; margin-bottom: -1px; transition: color .15s; }
+    .dtab.active { color: #1a1a18; border-bottom-color: #1a1a18; font-weight: 500; }
+    .tabs-page { display: flex; gap: 6px; margin-bottom: 16px; }
+    .ptab { background: transparent; border: 0.5px solid #d3d1c7; border-radius: 8px; padding: 5px 14px; font-size: 13px; font-family: inherit; color: #888780; cursor: pointer; transition: background .15s, color .15s; }
+    .ptab.active { background: #ededeb; color: #1a1a18; font-weight: 500; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+    .card { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 12px; padding: 1rem; }
+    .card-label { font-size: 11px; color: #888780; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
+    .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .col-label { font-size: 10px; color: #b4b2a9; margin-bottom: 3px; }
+    .val { font-size: 17px; font-weight: 500; margin-bottom: 5px; }
+    .val-unit { font-size: 10px; color: #b4b2a9; font-weight: 400; }
+    .badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+    .badge-g { background: #EAF3DE; color: #3B6D11; }
+    .badge-m { background: #FAEEDA; color: #854F0B; }
+    .badge-b { background: #FCEBEB; color: #A32D2D; }
+    .delta { border-top: 0.5px solid #d3d1c7; padding-top: 6px; font-size: 12px; font-weight: 500; }
+    .refresh-btn { background: transparent; border: 0.5px solid #d3d1c7; border-radius: 8px; padding: 5px 12px; font-size: 12px; font-family: inherit; color: #888780; cursor: pointer; }
+    .refresh-btn:hover { color: #1a1a18; background: #ededeb; }
+    .status-msg { font-size: 12px; color: #888780; margin-left: 4px; }
+    .summary-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+    .sum-card { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 12px; padding: 1rem; }
+    .sum-num { font-size: 28px; font-weight: 500; line-height: 1; margin-bottom: 4px; }
+    .sum-label { font-size: 12px; color: #888780; }
+    .insight-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.5rem; }
+    .insight-row { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 10px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .insight-title { font-size: 13px; font-weight: 500; }
+    .insight-sub { font-size: 11px; color: #888780; margin-top: 2px; }
+    .insight-pct { font-size: 14px; font-weight: 500; white-space: nowrap; }
+    .change-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-bottom: 1.5rem; }
+    .change-card { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+    .change-arrow { font-size: 14px; color: #b4b2a9; }
+    .change-info { flex: 1; }
+    .change-metric { font-size: 13px; font-weight: 500; }
+    .change-ctx { font-size: 11px; color: #888780; margin-top: 2px; }
+    .section-divider { border: none; border-top: 0.5px solid #d3d1c7; margin: 1rem 0; }
+    .warn-section h2 { color: #854F0B; }
+    .hidden { display: none; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1a1a18; color: #f1efe8; }
+      .card, .sum-card, .insight-row, .change-card { background: #2c2c2a; border-color: #444441; }
+      .pill, .ptab.active { background: #2c2c2a; }
+      .pill { color: #888780; }
+      .nav-top, .tabs-device, .ptab, .section-divider { border-color: #444441; }
+      .card-label, .legend-item, .sum-label, .insight-sub, .change-ctx { color: #888780; }
+      .ntab.active, .dtab.active { color: #f1efe8; border-bottom-color: #f1efe8; }
+      .delta, .card-row { border-color: #444441; }
+      .badge-g { background: #173404; color: #C0DD97; }
+      .badge-m { background: #412402; color: #FAC775; }
+      .badge-b { background: #501313; color: #F7C1C1; }
+      h2 { color: #888780; }
+      .col-label, .val-unit, .change-arrow { color: #5f5e5a; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Offpremium — saúde de performance</h1>
+    <p style="font-size:13px; color:#5f5e5a;">Migração NMarcas em <strong style="font-weight:500;">07/05/2026</strong> · Médias por período de 42 dias</p>
+  </div>
+  <div class="pills">
+    <span class="pill">Antes: 26/03 – 06/05/2026</span>
+    <span class="pill">Depois: 07/05 – 18/06/2026</span>
+    <button class="refresh-btn" onclick="fetchData()">↻ Atualizar dados</button>
+    <span class="status-msg" id="status"></span>
+  </div>
+</div>
+
+<div class="nav-top">
+  <button class="ntab active" onclick="switchView('metricas')">Métricas</button>
+  <button class="ntab" onclick="switchView('insights')">Insights</button>
+</div>
+
+<div id="view-metricas">
+  <div class="legend">
+    <span class="legend-item"><span class="dot" style="background:#639922"></span>Bom</span>
+    <span class="legend-item"><span class="dot" style="background:#BA7517"></span>Moderado</span>
+    <span class="legend-item"><span class="dot" style="background:#A32D2D"></span>Ruim</span>
+  </div>
+
+  <div class="tabs-device">
+    <button class="dtab active" data-d="desktop" onclick="switchDev('desktop')">Desktop</button>
+    <button class="dtab" data-d="mobile" onclick="switchDev('mobile')">Mobile</button>
+  </div>
+
+  <div class="tabs-page">
+    <button class="ptab active" data-p="Home" onclick="switchPage('Home')">Home</button>
+    <button class="ptab" data-p="PDC" onclick="switchPage('PDC')">PDC</button>
+    <button class="ptab" data-p="PDP" onclick="switchPage('PDP')">PDP</button>
+  </div>
+
+  <div class="grid" id="mg"></div>
+</div>
+
+<div id="view-insights" class="hidden">
+  <div id="insights-content"></div>
+</div>
+
+<p style="font-size:11px; color:#b4b2a9; margin-top:20px;">Fonte: <a href="https://docs.google.com/spreadsheets/d/1rxnxCEQ7bplbGVn211aJ-PaK-lLZ94ceLOGGcq5MbkA/edit?gid=211285240" style="color:#b4b2a9;" target="_blank">Indicadores de performance Headless — Offpremium</a> · Dados atualizados em <span id="last-update">18/06/2026</span></p>
+
+<script>
+const SHEET_ID = '1rxnxCEQ7bplbGVn211aJ-PaK-lLZ94ceLOGGcq5MbkA';
+const GID = '211285240';
+
+let DAT = {
+  desktop:{
+    Home:{b:[21.57,284.17,6927.85,0.3925,9595.45,1245.05,5563.26],a:[58.57,324.30,1574.28,0.0073,5645.33,1380.12,4104.10]},
+    PDC:{b:[34.89,351.08,6324.33,0.0929,7565.09,2566.71,4192.02],a:[40.96,316.69,4682.80,0.0427,5832.37,1442.97,3689.17]},
+    PDP:{b:[25.50,321.88,3264.14,0.6670,8725.06,1990.05,3813.35],a:[65.75,346.02,1261.57,0.0857,5606.22,1076.79,1952.35]}
+  },
+  mobile:{
+    Home:{b:[30.90,2480.79,31185.55,0.1636,36526.12,1647.84,13065.62],a:[34.67,2460.39,12027.70,0.1531,24504.80,1757.93,11342.37]},
+    PDC:{b:[24.19,3031.23,19206.56,0.2118,31555.03,3602.37,10943.69],a:[37.92,2355.80,20068.00,0.0573,25024.40,1753.80,9555.41]},
+    PDP:{b:[19.88,2954.60,23145.59,0.4190,40355.82,2591.29,11848.63],a:[46.55,2381.98,8565.94,0.0479,25116.34,1481.15,7644.91]}
+  }
+};
+
+const MET = ['Performance Score','FCP','LCP','CLS','Interactive','TBT','SI'];
+const UNT = ['','ms','ms','','ms','ms','ms'];
+const TH = {
+  desktop:{'Performance Score':{g:50,m:90,h:true},'FCP':{g:900,m:1600},'LCP':{g:1200,m:2400},'CLS':{g:0.1,m:0.25},'Interactive':{g:3800,m:7300},'TBT':{g:150,m:350},'SI':{g:1300,m:2300}},
+  mobile:{'Performance Score':{g:50,m:90,h:true},'FCP':{g:1800,m:3000},'LCP':{g:2500,m:4000},'CLS':{g:0.1,m:0.25},'Interactive':{g:3800,m:7300},'TBT':{g:200,m:600},'SI':{g:3400,m:5800}}
+};
+let dev = 'desktop', pg = 'Home', currentView = 'metricas';
+
+function getStatus(m, v, d) {
+  const t = TH[d][m];
+  if (t.h) return v >= t.m ? 'g' : v >= t.g ? 'm' : 'b';
+  return v <= t.g ? 'g' : v <= t.m ? 'm' : 'b';
+}
+const SL = { g: 'Bom', m: 'Moderado', b: 'Ruim' };
+const SLF = { g: 'Bom', m: 'Moderado', b: 'Ruim' };
+function badge(s) { return `<span class="badge badge-${s}">${SL[s]}</span>`; }
+function fmt(m, v) {
+  if (m === 'Performance Score') return Math.round(v);
+  if (m === 'CLS') return v.toFixed(3);
+  return Math.round(v).toLocaleString('pt-BR');
+}
+
+function allDeltas() {
+  const items = [];
+  ['desktop','mobile'].forEach(d => {
+    ['Home','PDC','PDP'].forEach(p => {
+      const dat = DAT[d][p];
+      MET.forEach((m, i) => {
+        const bv = dat.b[i], av = dat.a[i];
+        const t = TH[d][m];
+        const pct = ((av - bv) / bv) * 100;
+        const improved = t.h ? pct > 0 : pct < 0;
+        const absPct = Math.abs(pct);
+        const bStatus = getStatus(m, bv, d);
+        const aStatus = getStatus(m, av, d);
+        items.push({ device: d, page: p, metric: m, idx: i, bv, av, pct, improved, absPct, bStatus, aStatus, unit: UNT[i] });
+      });
+    });
+  });
+  return items;
+}
+
+function renderInsights() {
+  const items = allDeltas();
+  const improved = items.filter(x => x.improved);
+  const worsened = items.filter(x => !x.improved && Math.abs(x.pct) > 0.5);
+  const catChanged = items.filter(x => x.bStatus !== x.aStatus && x.improved);
+  const topImprovements = [...improved].sort((a,b) => b.absPct - a.absPct).slice(0, 8);
+  const topWorse = [...worsened].sort((a,b) => b.absPct - a.absPct);
+
+  const devLabel = d => d === 'desktop' ? 'Desktop' : 'Mobile';
+  const statusColor = { g: '#3B6D11', m: '#854F0B', b: '#A32D2D' };
+  const statusBg = { g: '#EAF3DE', m: '#FAEEDA', b: '#FCEBEB' };
+
+  function insightRow(x, colorFn) {
+    const col = colorFn(x);
+    const sign = x.pct > 0 ? '+' : '';
+    return `<div class="insight-row">
+      <div>
+        <div class="insight-title">${x.metric} · ${devLabel(x.device)} / ${x.page}</div>
+        <div class="insight-sub">${fmt(x.metric, x.bv)}${x.unit} → ${fmt(x.metric, x.av)}${x.unit}</div>
+      </div>
+      <div class="insight-pct" style="color:${col}">${sign}${x.pct.toFixed(1)}%</div>
+    </div>`;
+  }
+
+  function changeCard(x) {
+    const bc = statusColor[x.bStatus], ac = statusColor[x.aStatus];
+    const bbg = statusBg[x.bStatus], abg = statusBg[x.aStatus];
+    return `<div class="change-card">
+      <div class="change-info">
+        <div class="change-metric">${x.metric} · ${devLabel(x.device)} / ${x.page}</div>
+        <div class="change-ctx" style="margin-top:5px; display:flex; align-items:center; gap:6px;">
+          <span class="badge" style="background:${bbg};color:${bc}">${SLF[x.bStatus]}</span>
+          <span class="change-arrow">→</span>
+          <span class="badge" style="background:${abg};color:${ac}">${SLF[x.aStatus]}</span>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('insights-content').innerHTML = `
+    <div class="summary-bar">
+      <div class="sum-card">
+        <div class="sum-num" style="color:#3B6D11">${improved.length}</div>
+        <div class="sum-label">métricas melhoraram</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-num" style="color:#A32D2D">${worsened.length}</div>
+        <div class="sum-label">métricas pioraram</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-num" style="color:#185FA5">${catChanged.length}</div>
+        <div class="sum-label">mudanças de categoria</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-num">${items.length}</div>
+        <div class="sum-label">combinações avaliadas</div>
+      </div>
+    </div>
+
+    <h2>Maiores melhorias</h2>
+    <div class="insight-list">
+      ${topImprovements.map(x => insightRow(x, () => '#3B6D11')).join('')}
+    </div>
+
+    <hr class="section-divider">
+
+    <h2>Mudanças de categoria</h2>
+    <div class="change-grid">
+      ${catChanged.map(changeCard).join('')}
+    </div>
+
+    ${topWorse.length ? `
+    <hr class="section-divider">
+    <div class="warn-section">
+      <h2>Atenção — métricas que pioraram</h2>
+      <div class="insight-list">
+        ${topWorse.map(x => insightRow(x, () => '#A32D2D')).join('')}
+      </div>
+    </div>` : ''}
+
+    <hr class="section-divider">
+
+    <h2>Pontos que ainda precisam de atenção</h2>
+    <div class="insight-list">
+      ${items.filter(x => x.aStatus === 'b').sort((a,b) => b.absPct - a.absPct).slice(0,6).map(x => `
+        <div class="insight-row">
+          <div>
+            <div class="insight-title">${x.metric} · ${devLabel(x.device)} / ${x.page}</div>
+            <div class="insight-sub">Valor atual: ${fmt(x.metric, x.av)}${x.unit} — ainda na faixa <strong style="font-weight:500;color:#A32D2D">Ruim</strong></div>
+          </div>
+          <span class="badge badge-b">Ruim</span>
+        </div>`).join('')}
+    </div>
+  `;
+}
+
+function render() {
+  const d = DAT[dev][pg];
+  document.getElementById('mg').innerHTML = MET.map((m, i) => {
+    const bv = d.b[i], av = d.a[i];
+    const t = TH[dev][m];
+    const pct = ((av - bv) / bv) * 100;
+    const improved = t.h ? pct > 0 : pct < 0;
+    const worse = t.h ? pct < 0 : pct > 0;
+    const dcol = improved ? '#3B6D11' : worse ? '#A32D2D' : '#888780';
+    const arr = pct > 0 ? '▲' : '▼';
+    const u = UNT[i];
+    return `<div class="card">
+      <div class="card-label">${m}</div>
+      <div class="card-row">
+        <div>
+          <div class="col-label">Antes</div>
+          <div class="val">${fmt(m,bv)}<span class="val-unit">${u}</span></div>
+          ${badge(getStatus(m,bv,dev))}
+        </div>
+        <div>
+          <div class="col-label">Depois</div>
+          <div class="val">${fmt(m,av)}<span class="val-unit">${u}</span></div>
+          ${badge(getStatus(m,av,dev))}
+        </div>
+      </div>
+      <div class="delta" style="color:${dcol}">${arr} ${Math.abs(pct).toFixed(1)}% ${improved ? 'de melhora' : worse ? 'de piora' : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function switchView(v) {
+  currentView = v;
+  document.querySelectorAll('.ntab').forEach((t, i) => t.classList.toggle('active', (i === 0 && v === 'metricas') || (i === 1 && v === 'insights')));
+  document.getElementById('view-metricas').classList.toggle('hidden', v !== 'metricas');
+  document.getElementById('view-insights').classList.toggle('hidden', v !== 'insights');
+  if (v === 'insights') renderInsights();
+}
+
+function switchDev(d) {
+  dev = d;
+  document.querySelectorAll('.dtab').forEach(t => t.classList.toggle('active', t.dataset.d === d));
+  render();
+}
+function switchPage(p) {
+  pg = p;
+  document.querySelectorAll('.ptab').forEach(t => t.classList.toggle('active', t.dataset.p === p));
+  render();
+}
+
+async function fetchData() {
+  const statusEl = document.getElementById('status');
+  statusEl.textContent = 'Buscando...';
+  try {
+    const MIGRATION = "date '2026-05-07'";
+    const TODAY = new Date().toISOString().split('T')[0];
+    const BEFORE_START = "date '2026-03-26'";
+    const AFTER_END = `date '${TODAY}'`;
+    async function gviz(query) {
+      const u = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}&tq=${encodeURIComponent(query)}`;
+      const r = await fetch(u, { credentials: 'include' });
+      const t = await r.text();
+      const j = JSON.parse(t.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, ''));
+      return j.table.rows.map(row => row.c.map(c => c ? c.v : null));
+    }
+    const [bRows, aRows] = await Promise.all([
+      gviz(`SELECT B, C, AVG(D), AVG(E), AVG(F), AVG(G), AVG(H), AVG(I), AVG(J) WHERE A >= ${BEFORE_START} AND A < ${MIGRATION} GROUP BY B, C`),
+      gviz(`SELECT B, C, AVG(D), AVG(E), AVG(F), AVG(G), AVG(H), AVG(I), AVG(J) WHERE A >= ${MIGRATION} AND A <= ${AFTER_END} GROUP BY B, C`)
+    ]);
+    function parseRows(rows) {
+      const out = { desktop: {}, mobile: {} };
+      rows.forEach(r => { const [device, page, ...vals] = r; if (device && page) out[device][page] = vals; });
+      return out;
+    }
+    const bData = parseRows(bRows), aData = parseRows(aRows);
+    ['desktop','mobile'].forEach(d => ['Home','PDC','PDP'].forEach(p => {
+      if (bData[d][p] && aData[d][p]) DAT[d][p] = { b: bData[d][p], a: aData[d][p] };
+    }));
+    const today = new Date().toLocaleDateString('pt-BR');
+    document.getElementById('last-update').textContent = today;
+    statusEl.textContent = `✓ Atualizado em ${today}`;
+    setTimeout(() => statusEl.textContent = '', 4000);
+    render();
+    if (currentView === 'insights') renderInsights();
+  } catch(e) {
+    statusEl.textContent = '⚠ Falha ao buscar. Verifique se está logado no Google.';
+    console.error(e);
+  }
+}
+
+render();
+</script>
+</body>
+</html>

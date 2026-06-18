@@ -40,6 +40,13 @@
     .refresh-btn { background: transparent; border: 0.5px solid #d3d1c7; border-radius: 8px; padding: 5px 12px; font-size: 12px; font-family: inherit; color: #888780; cursor: pointer; }
     .refresh-btn:hover { color: #1a1a18; background: #ededeb; }
     .status-msg { font-size: 12px; color: #888780; margin-left: 4px; }
+    .tip-wrap { position: relative; display: inline-block; cursor: help; }
+    .tip-wrap .tip-box { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #2c2c2a; color: #f1efe8; font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0; line-height: 1.5; padding: 8px 12px; border-radius: 8px; width: 240px; z-index: 100; pointer-events: none; white-space: normal; }
+    .tip-wrap:hover .tip-box { display: block; }
+    .tip-wrap .tip-box::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #2c2c2a; }
+    .tip-icon { font-size: 10px; color: #b4b2a9; margin-left: 3px; vertical-align: middle; }
+    .spa-note { background: #E6F1FB; border: 0.5px solid #B5D4F4; border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #0C447C; line-height: 1.6; margin-bottom: 1.25rem; }
+    @media (prefers-color-scheme: dark) { .spa-note { background: #042C53; border-color: #185FA5; color: #85B7EB; } .tip-wrap .tip-box { background: #f1efe8; color: #1a1a18; } .tip-wrap .tip-box::after { border-top-color: #f1efe8; } }
     .summary-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
     .sum-card { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 12px; padding: 1rem; }
     .sum-num { font-size: 28px; font-weight: 500; line-height: 1; margin-bottom: 4px; }
@@ -141,6 +148,18 @@ let DAT = {
 
 const MET = ['Performance Score','FCP','LCP','CLS','Interactive','TBT','SI'];
 const UNT = ['','ms','ms','','ms','ms','ms'];
+const TIPS = {
+  'Performance Score': 'Média ponderada das métricas do Lighthouse. Varia conforme condições de teste, hardware, extensões do navegador e anúncios.',
+  'FCP': 'First Contentful Paint — tempo até o primeiro conteúdo aparecer na tela (texto, imagem, SVG ou canvas). Marca o início percebido do carregamento.',
+  'LCP': 'Largest Contentful Paint — tempo para renderizar o maior elemento visível da página. Indica quando o conteúdo principal está pronto para o usuário.',
+  'CLS': 'Cumulative Layout Shift — mede deslocamentos visuais inesperados de elementos durante o carregamento. Quanto menor, mais estável o layout.',
+  'Interactive': 'Time to Interactive — tempo até a página responder plenamente a cliques, toques e teclado em até 50ms.',
+  'TBT': 'Total Blocking Time — tempo total em que a página bloqueia interação entre FCP e Interactive. Tarefas acima de 50ms contam como bloqueantes.',
+  'SI': 'Speed Index — velocidade com que o conteúdo visual aparece progressivamente durante o carregamento, calculado a partir de capturas de vídeo.'
+};
+function tipWrap(label) {
+  return `<span class="tip-wrap">${label} <span class="tip-icon">?</span><span class="tip-box">${TIPS[label]}</span></span>`;
+}
 const TH = {
   desktop:{'Performance Score':{g:50,m:90,h:true},'FCP':{g:900,m:1600},'LCP':{g:1200,m:2400},'CLS':{g:0.1,m:0.25},'Interactive':{g:3800,m:7300},'TBT':{g:150,m:350},'SI':{g:1300,m:2300}},
   mobile:{'Performance Score':{g:50,m:90,h:true},'FCP':{g:1800,m:3000},'LCP':{g:2500,m:4000},'CLS':{g:0.1,m:0.25},'Interactive':{g:3800,m:7300},'TBT':{g:200,m:600},'SI':{g:3400,m:5800}}
@@ -198,7 +217,7 @@ function renderInsights() {
     const sign = x.pct > 0 ? '+' : '';
     return `<div class="insight-row">
       <div>
-        <div class="insight-title">${x.metric} · ${devLabel(x.device)} / ${x.page}</div>
+        <div class="insight-title">${tipWrap(x.metric)} · ${devLabel(x.device)} / ${x.page}</div>
         <div class="insight-sub">${fmt(x.metric, x.bv)}${x.unit} → ${fmt(x.metric, x.av)}${x.unit}</div>
       </div>
       <div class="insight-pct" style="color:${col}">${sign}${x.pct.toFixed(1)}%</div>
@@ -240,6 +259,8 @@ function renderInsights() {
       </div>
     </div>
 
+    <div class="spa-note">⚠ Contexto de medição: métricas calculadas no <strong>primeiro carregamento</strong> da página. Em Next.js/SPA, este é o carregamento mais pesado — ao navegar entre páginas, elementos compartilhados (header, footer, minicart) já estão em cache, gerando ganho de performance considerável na navegação subsequente.</div>
+
     <h2>Maiores melhorias</h2>
     <div class="insight-list">
       ${topImprovements.map(x => insightRow(x, () => '#3B6D11')).join('')}
@@ -268,7 +289,7 @@ function renderInsights() {
       ${items.filter(x => x.aStatus === 'b').sort((a,b) => b.absPct - a.absPct).slice(0,6).map(x => `
         <div class="insight-row">
           <div>
-            <div class="insight-title">${x.metric} · ${devLabel(x.device)} / ${x.page}</div>
+            <div class="insight-title">${tipWrap(x.metric)} · ${devLabel(x.device)} / ${x.page}</div>
             <div class="insight-sub">Valor atual: ${fmt(x.metric, x.av)}${x.unit} — ainda na faixa <strong style="font-weight:500;color:#A32D2D">Ruim</strong></div>
           </div>
           <span class="badge badge-b">Ruim</span>
@@ -289,7 +310,7 @@ function render() {
     const arr = pct > 0 ? '▲' : '▼';
     const u = UNT[i];
     return `<div class="card">
-      <div class="card-label">${m}</div>
+      <div class="card-label">${tipWrap(m)}</div>
       <div class="card-row">
         <div>
           <div class="col-label">Antes</div>
